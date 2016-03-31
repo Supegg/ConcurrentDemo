@@ -17,7 +17,7 @@ namespace Client
         //static object l = new object();//for lock
         static List<TcpClient> tcpList = new List<TcpClient>();
         static Stopwatch watch = new Stopwatch();
-          //teest branch  move
+          //teest branch  move  22
         static void Main(string[] args)
         {
             presure();
