@@ -6,6 +6,7 @@ using System.Threading;
 using System.IO;
 using System.Net.Sockets;
 using System.Net;
+using System.Diagnostics;
 
 namespace Server
 {
@@ -13,8 +14,9 @@ namespace Server
     {
         static List<TcpClient> tcpList = new List<TcpClient>();
         static TcpListener listener = new TcpListener(IPAddress.Any, 9998);
-        static int rwCount = 0;
+        static volatile int rwCount = 0;
         //static object l = new object();
+        static Stopwatch watch = new Stopwatch();
           
         static void Main(string[] args)
         {
@@ -22,8 +24,8 @@ namespace Server
               
             do
             {
-                Console.WriteLine("Clients: {0}, rwCount: {1}", tcpList.Count, rwCount);
-                rwCount = 0;
+                Console.WriteLine("Clients: {0}\t, rws/sec: {1}", tcpList.Count, rwCount);
+                rwCount = 0;//set 0, per second
                 Thread.Sleep(1000);
             } while (true);
 
@@ -41,6 +43,11 @@ namespace Server
 
         private static void acceptCallback(IAsyncResult ar)
         {
+            if(!watch.IsRunning)
+            {
+                watch.Restart();
+            }
+
             TcpListener listener = (TcpListener)ar.AsyncState;
             try
             {
@@ -75,6 +82,7 @@ namespace Server
 
         private static void read(IAsyncResult ar)
         {
+            rwCount++;
             object[] state = (object[])ar.AsyncState;
             TcpClient conn = (TcpClient)state[0];
             byte[] buf = (byte[])state[1];
@@ -82,7 +90,6 @@ namespace Server
             try
             {
                 int bytesRead = conn.GetStream().EndRead(ar);
-                rwCount++;
 
                 conn.GetStream().BeginWrite(buf, 0, bytesRead, new AsyncCallback(write), state);
             }
@@ -96,6 +103,7 @@ namespace Server
 
         private static void write(IAsyncResult ar)
         {
+            rwCount++;
             object[] state = (object[])ar.AsyncState;
             TcpClient conn = (TcpClient)state[0];
             byte[] buf = (byte[])state[1];
@@ -103,7 +111,6 @@ namespace Server
             try
             {
                 conn.GetStream().EndWrite(ar);
-                rwCount++;
                 conn.GetStream().BeginRead(buf, 0, buf.Length, new AsyncCallback(read), state);
             }
             catch (Exception ex)
