@@ -11,22 +11,21 @@ namespace Client
     class Program
     {
         static volatile int errors = 0;
-        static volatile int rwCount = 0;
-        static int robots = 4;//4*4 = 9w
-        static int tcps = 100;
+        static volatile int tcpNum = 0;
+        static int robots = 1;
+        static int repeat = 100;
         //static object l = new object();//for lock
         static List<TcpClient> tcpList = new List<TcpClient>();
-
         static Stopwatch watch = new Stopwatch();
+        //11
         static void Main(string[] args)
         {
             presure();
 
             do
             {
-                Console.WriteLine("Robots:{0}*{1}\t, rw/sec: {2}\t, errors:{3}\t", 
-                    robots, tcps, rwCount, errors);
-                rwCount = 0;//set 0, per second
+                Console.Write(DateTime.Now.ToLongTimeString());
+                Console.WriteLine("  Robots:{0}*{1}\t, tcpNums: {2}, errors:{3}\t, run times:{4}", robots, repeat, tcpNum, errors, watch.ElapsedMilliseconds);
                 Thread.Sleep(1000);
             } while (true);
 
@@ -46,7 +45,7 @@ namespace Client
             {
                 ts.Add(new Thread(new ParameterizedThreadStart((o) =>
                 {
-                    for (int r = 0; r < tcps; r++)
+                    for (int r = 0; r < repeat; r++)
                     {
 
                         try
@@ -61,6 +60,8 @@ namespace Client
                             };
 
                             conn.GetStream().BeginWrite(buf, 0, buf.Length, new AsyncCallback(write), state);
+
+                            tcpNum++;
 
                         }
                         catch (Exception ex)
@@ -89,7 +90,6 @@ namespace Client
 
         private static void read(IAsyncResult ar)
         {
-            rwCount++;
             object[] state = (object[])ar.AsyncState;
             TcpClient conn = (TcpClient)state[0];
             byte[] buf = (byte[])state[1];
@@ -106,12 +106,10 @@ namespace Client
                 conn.GetStream().Close();
                 conn.Close();
             }
-
         }
 
         private static void write(IAsyncResult ar)
         {
-            rwCount++;
             object[] state = (object[])ar.AsyncState;
             TcpClient conn = (TcpClient)state[0];
             byte[] buf = (byte[])state[1];
@@ -128,7 +126,6 @@ namespace Client
                 conn.GetStream().Close();
                 conn.Close();
             }
-
         }
     }
 }
